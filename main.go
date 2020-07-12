@@ -109,10 +109,10 @@ func main() {
 		f := NewFile(pkg.Name)
 		f.HeaderComment("This file has been automatically generated. Don't edit it.")
 
-		f.Add(Type().Id(t+"Option").Func().Params(Op("*").Id(t)), Line())
+		f.Add(Type().Id("Option").Func().Params(Op("*").Id(t)), Line())
 
 		f.Add(
-			Func().Id("New"+t).Params(Id("opts").Id("..."+t+"Option")).Op("*").Id(t).Block(
+			Func().Id("New"+t).Params(Id("opts").Op("...").Id("Option")).Op("*").Id(t).Block(
 				Id("o").Op(":=").Op("&").Id(t).Values(),
 				Line(),
 				For(Id("_, opt").Op(":=").Range().Id("opts")).Block(
@@ -126,7 +126,7 @@ func main() {
 
 		for field, typ := range fields {
 			f.Add(
-				Func().Id(field).Params(Id("x").Id(typ)).Id(t+"Option").Block(
+				Func().Id(field).Params(Id("x").Id(typ)).Id("Option").Block(
 					Return(
 						Func().Params(Id("o").Op("*").Id(t)).Block(
 							Id("o").Dot(field).Op("=").Id("x"),
