@@ -106,7 +106,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		f := NewFile("data")
+		f := NewFile(pkg.Name)
 		f.HeaderComment("This file has been automatically generated. Don't edit it.")
 
 		f.Add(Type().Id(t+"Option").Func().Params(Op("*").Id(t)), Line())
