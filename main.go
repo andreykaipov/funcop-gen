@@ -75,7 +75,7 @@ func main() {
 	types := strings.Split(*typeNames, ",")
 
 	pkgs, err := packages.Load(&packages.Config{
-		Mode: packages.NeedName | packages.NeedSyntax,
+		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedImports,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load: %v\n", err)
@@ -120,6 +120,15 @@ func main() {
 		}
 	}
 
+	// This is a silly way of importing the same imports from the current
+	// file to the generated one, as Jennifer doesn't allow manual imports
+	// without any qualifiers. See
+	// https://github.com/dave/jennifer/issues/20.
+	imports := Empty()
+	for _, p := range pkg.Imports {
+		imports.Add(Id(p.Name).Lit(p.PkgPath), Line())
+	}
+
 	for _, t := range types {
 		fields, ok := structs[t]
 		if !ok {
@@ -128,7 +137,10 @@ func main() {
 		}
 
 		f := NewFile(pkg.Name)
+
 		f.HeaderComment("This file has been automatically generated. Don't edit it.")
+
+		f.Add(Id("import").Parens(imports))
 
 		f.Add(Type().Id("Option").Func().Params(Op("*").Id(t)), Line())
 
@@ -155,14 +167,7 @@ func main() {
 		sort.Strings(keys)
 
 		for _, field := range keys {
-			typ := fields[field]
-
-			typName := Id(typ)
-
-			qualified := strings.Split(typ, ".")
-			if len(qualified) > 1 {
-				typName = Qual(qualified[0], qualified[1])
-			}
+			typeName := Id(fields[field])
 
 			f.Add(
 				Func().Id(*prefix+field).Params(Id("x").Add(typeName)).Id("Option").Block(
