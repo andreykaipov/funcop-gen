@@ -18,7 +18,7 @@ func structFieldsToMap(s *ast.StructType) StructFieldMap {
 	out := map[string]string{}
 
 	for _, f := range s.Fields.List {
-		typeName := f.Type.(*ast.Ident).Name
+		typeName := findExprType(f.Type)
 
 		// anonymous field, i.e. an embedded field
 		if f.Names == nil {
@@ -32,6 +32,23 @@ func structFieldsToMap(s *ast.StructType) StructFieldMap {
 	}
 
 	return out
+}
+
+func findExprType(e interface{}) (typeName string) {
+	switch typ := e.(type) {
+	case *ast.Ident:
+		typeName = typ.Name
+	case *ast.SelectorExpr:
+		typeName = fmt.Sprintf("%s.%s", findExprType(typ.X), typ.Sel.Name)
+	case *ast.MapType:
+		typeName = fmt.Sprintf("map[%s]%s", findExprType(typ.Key), findExprType(typ.Value))
+	case *ast.ArrayType:
+		typeName = fmt.Sprintf("[]%s", findExprType(typ.Elt))
+	default:
+		panic(fmt.Errorf("unhandled case for expression %#v", typ))
+	}
+
+	return typeName
 }
 
 var (
