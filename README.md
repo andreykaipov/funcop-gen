@@ -64,6 +64,16 @@ func Surname(x string) Option {
 }
 ```
 
+Now we can instantiate our animals as follows:
+
+```go
+a := NewAnimal(
+	Surname("ducky"),
+	Color("blue"),
+	Cute(true),
+)
+```
+
 ## faq
 
 ### How do I integrate it into my development lifecycle?
