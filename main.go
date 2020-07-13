@@ -39,6 +39,8 @@ func findExprType(e interface{}) (typeName string) {
 	switch typ := e.(type) {
 	case *ast.Ident:
 		typeName = typ.Name
+	case *ast.StarExpr:
+		typeName = fmt.Sprintf("*%s", findExprType(typ.X))
 	case *ast.SelectorExpr:
 		typeName = fmt.Sprintf("%s.%s", findExprType(typ.X), typ.Sel.Name)
 	case *ast.MapType:
