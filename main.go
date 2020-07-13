@@ -142,8 +142,15 @@ func main() {
 		)
 
 		for field, typ := range fields {
+			typName := Id(typ)
+
+			qualified := strings.Split(typ, ".")
+			if len(qualified) > 1 {
+				typName = Qual(qualified[0], qualified[1])
+			}
+
 			f.Add(
-				Func().Id(field).Params(Id("x").Id(typ)).Id("Option").Block(
+				Func().Id(field).Params(Id("x").Add(typName)).Id("Option").Block(
 					Return(
 						Func().Params(Id("o").Op("*").Id(t)).Block(
 							Id("o").Dot(field).Op("=").Id("x"),
