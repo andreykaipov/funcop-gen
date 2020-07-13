@@ -182,6 +182,9 @@ func main() {
 		}
 
 		outFile := fmt.Sprintf("zz_generated.%s_funcop.go", strings.ToLower(t))
-		f.Save(outFile)
+
+		if err := f.Save(outFile); err != nil {
+			panic(err)
+		}
 	}
 }
