@@ -56,6 +56,7 @@ func findExprType(e interface{}) (typeName string) {
 
 var (
 	typeNames = flag.String("type", "", "comma-delimited list of type names")
+	prefix    = flag.String("prefix", "", "prefix to attach to functional options")
 )
 
 func Usage() {
@@ -164,7 +165,7 @@ func main() {
 			}
 
 			f.Add(
-				Func().Id(field).Params(Id("x").Add(typName)).Id("Option").Block(
+				Func().Id(*prefix+field).Params(Id("x").Add(typeName)).Id("Option").Block(
 					Return(
 						Func().Params(Id("o").Op("*").Id(t)).Block(
 							Id("o").Dot(field).Op("=").Id("x"),
