@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"os"
+	"sort"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
@@ -141,7 +142,18 @@ func main() {
 			Line(),
 		)
 
-		for field, typ := range fields {
+		// Sort the fields so we can traverse the map in a deterministic
+		// order as we want the generated code to be the same between
+		// subsequent runs.
+		keys := make([]string, 0, len(fields))
+		for k := range fields {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, field := range keys {
+			typ := fields[field]
+
 			typName := Id(typ)
 
 			qualified := strings.Split(typ, ".")
