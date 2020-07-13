@@ -1,6 +1,8 @@
 # funcopgen
 
-funcopgen is a small tool to generate functional options for your Go structs.
+funcopgen is a small tool to generate [functional
+options](https://github.com/tmrts/go-patterns/blob/master/idiom/functional-options.md)
+for your Go structs.
 
 ## usage
 
