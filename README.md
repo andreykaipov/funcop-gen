@@ -4,12 +4,6 @@ funcopgen is a small tool to generate functional options for your Go structs.
 
 ## usage
 
-First download this tool:
-
-```shell
-go get github.com/andreykaipov/funcopgen
-```
-
 Take some struct in `my/pkg/here/animal`:
 
 ```go
@@ -26,7 +20,7 @@ Add a `go:generate` directive anywhere inside of the `animal` package as
 follows.
 
 ```go
-//go:generate funcopgen -type Animal
+//go:generate go run github.com/andreykaipov/funcopgen -type Animal
 ```
 
 Run `go generate ./...`.
