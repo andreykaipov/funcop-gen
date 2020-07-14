@@ -9,54 +9,92 @@ import (
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
+	"github.com/fatih/structtag"
 	"golang.org/x/tools/go/packages"
 )
 
-// StructFieldMap is a map of a struct's field names to the type of the field.
-type StructFieldMap map[string]string
+// StructFieldMap is a map of a struct's field names to data about the field.
+type StructFieldMap map[string]*FieldData
+
+type FieldData struct {
+	// Tags is a map representing a field's tags, e.g. `default:"hello"`
+	Tags *structtag.Tags
+
+	// Type is the string representation of a type, e.g. "string" or
+	// "[]*myQualified.StructType"
+	Type string
+}
 
 func structFieldsToMap(s *ast.StructType) StructFieldMap {
-	out := map[string]string{}
+	out := StructFieldMap{}
 
 	for _, f := range s.Fields.List {
-		typeName := findExprType(f.Type)
+		typeName := findFieldType(f)
+
+		data := &FieldData{
+			Type: typeName,
+			Tags: findFieldTags(f),
+		}
 
 		// anonymous field, i.e. an embedded field
 		if f.Names == nil {
-			out[typeName] = typeName
+			out[typeName] = data
 			continue
 		}
 
 		for _, n := range f.Names {
-			out[n.Name] = typeName
+			out[n.Name] = data
 		}
 	}
 
 	return out
 }
 
-func findExprType(e interface{}) (typeName string) {
-	switch typ := e.(type) {
-	case *ast.Ident:
-		typeName = typ.Name
-	case *ast.StarExpr:
-		typeName = fmt.Sprintf("*%s", findExprType(typ.X))
-	case *ast.SelectorExpr:
-		typeName = fmt.Sprintf("%s.%s", findExprType(typ.X), typ.Sel.Name)
-	case *ast.MapType:
-		typeName = fmt.Sprintf("map[%s]%s", findExprType(typ.Key), findExprType(typ.Value))
-	case *ast.ArrayType:
-		typeName = fmt.Sprintf("[]%s", findExprType(typ.Elt))
-	default:
-		panic(fmt.Errorf("unhandled case for expression %#v", typ))
+func findFieldTags(f *ast.Field) *structtag.Tags {
+	if f.Tag == nil {
+		return &structtag.Tags{}
 	}
 
-	return typeName
+	// get rid of the backticks
+	trimmed := f.Tag.Value[1 : len(f.Tag.Value)-1]
+
+	tag, err := structtag.Parse(trimmed)
+	if err != nil {
+		panic(err)
+	}
+
+	return tag
+}
+
+func findFieldType(field *ast.Field) string {
+	var f func(e interface{}) string
+
+	f = func(e interface{}) (typeName string) {
+		switch typ := e.(type) {
+		case *ast.Ident:
+			typeName = typ.Name
+		case *ast.StarExpr:
+			typeName = fmt.Sprintf("*%s", f(typ.X))
+		case *ast.SelectorExpr:
+			typeName = fmt.Sprintf("%s.%s", f(typ.X), typ.Sel.Name)
+		case *ast.MapType:
+			typeName = fmt.Sprintf("map[%s]%s", f(typ.Key), f(typ.Value))
+		case *ast.ArrayType:
+			typeName = fmt.Sprintf("[]%s", f(typ.Elt))
+		default:
+			panic(fmt.Errorf("unhandled case for expression %#v", typ))
+		}
+
+		return typeName
+	}
+
+	return f(field.Type)
 }
 
 var (
 	typeNames = flag.String("type", "", "comma-delimited list of type names")
 	prefix    = flag.String("prefix", "", "prefix to attach to functional options")
+	factory   = flag.Bool("factory", false, "if present, add a factory function for your type, e.g. NewX")
 )
 
 func Usage() {
@@ -136,27 +174,6 @@ func main() {
 			os.Exit(1)
 		}
 
-		f := NewFile(pkg.Name)
-
-		f.HeaderComment("This file has been automatically generated. Don't edit it.")
-
-		f.Add(Id("import").Parens(imports))
-
-		f.Add(Type().Id("Option").Func().Params(Op("*").Id(t)), Line())
-
-		f.Add(
-			Func().Id("New"+t).Params(Id("opts").Op("...").Id("Option")).Op("*").Id(t).Block(
-				Id("o").Op(":=").Op("&").Id(t).Values(),
-				Line(),
-				For(Id("_, opt").Op(":=").Range().Id("opts")).Block(
-					Id("opt").Call(Id("o")),
-				),
-				Line(),
-				Return(Id("o")),
-			),
-			Line(),
-		)
-
 		// Sort the fields so we can traverse the map in a deterministic
 		// order as we want the generated code to be the same between
 		// subsequent runs.
@@ -166,8 +183,46 @@ func main() {
 		}
 		sort.Strings(keys)
 
+		f := NewFile(pkg.Name)
+
+		f.HeaderComment("This file has been automatically generated. Don't edit it.")
+
+		f.Add(Id("import").Parens(imports))
+
+		f.Add(Type().Id("Option").Func().Params(Op("*").Id(t)), Line())
+
+		setDefaults := func(d Dict) {
+			for _, field := range keys {
+				tags := fields[field].Tags
+
+				if tag, _ := tags.Get("default"); tag != nil {
+					switch fields[field].Type {
+					case "string":
+						d[Id(field)] = Lit(tag.Name)
+					default:
+						d[Id(field)] = Id(tag.Name)
+					}
+				}
+			}
+		}
+
+		if *factory {
+			f.Add(
+				Func().Id("New"+t).Params(Id("opts").Op("...").Id("Option")).Op("*").Id(t).Block(
+					Id("o").Op(":=").Op("&").Id(t).Values(DictFunc(setDefaults)),
+					Line(),
+					For(Id("_, opt").Op(":=").Range().Id("opts")).Block(
+						Id("opt").Call(Id("o")),
+					),
+					Line(),
+					Return(Id("o")),
+				),
+				Line(),
+			)
+		}
+
 		for _, field := range keys {
-			typeName := Id(fields[field])
+			typeName := Id(fields[field].Type)
 
 			f.Add(
 				Func().Id(*prefix+field).Params(Id("x").Add(typeName)).Id("Option").Block(
