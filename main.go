@@ -77,6 +77,7 @@ func findFieldType(field *ast.Field) string {
 			typeName = fmt.Sprintf("*%s", f(typ.X))
 		case *ast.SelectorExpr:
 			typeName = fmt.Sprintf("%s.%s", f(typ.X), typ.Sel.Name)
+			selectorExprs[typeName] = nil
 		case *ast.MapType:
 			typeName = fmt.Sprintf("map[%s]%s", f(typ.Key), f(typ.Value))
 		case *ast.ArrayType:
@@ -92,9 +93,10 @@ func findFieldType(field *ast.Field) string {
 }
 
 var (
-	typeNames = flag.String("type", "", "comma-delimited list of type names")
-	prefix    = flag.String("prefix", "", "prefix to attach to functional options")
-	factory   = flag.Bool("factory", false, "if present, add a factory function for your type, e.g. NewX")
+	selectorExprs = map[string]interface{}{}
+	typeNames     = flag.String("type", "", "comma-delimited list of type names")
+	prefix        = flag.String("prefix", "", "prefix to attach to functional options")
+	factory       = flag.Bool("factory", false, "if present, add a factory function for your type, e.g. NewX")
 )
 
 func Usage() {
@@ -158,13 +160,20 @@ func main() {
 		}
 	}
 
-	// This is a silly way of importing the same imports from the current
-	// file to the generated one, as Jennifer doesn't allow manual imports
-	// without any qualifiers. See
-	// https://github.com/dave/jennifer/issues/20.
-	imports := Empty()
-	for _, p := range pkg.Imports {
-		imports.Add(Id(p.Name).Lit(p.PkgPath), Line())
+	// Compares the package imports to import only those that have a prefix
+	// with any of our found selector expressions.
+	setImports := func(g *Group) {
+		for _, p := range pkg.Imports {
+			for e := range selectorExprs {
+				if strings.HasPrefix(e, p.Name) {
+					// Jennifer doesn't have a nice func for
+					// manual imports. See
+					// https://github.com/dave/jennifer/issues/20.
+					g.Add(Id(p.Name).Lit(p.PkgPath), Line())
+					break
+				}
+			}
+		}
 	}
 
 	for _, t := range types {
@@ -187,7 +196,7 @@ func main() {
 
 		f.HeaderComment("This file has been automatically generated. Don't edit it.")
 
-		f.Add(Id("import").Parens(imports))
+		f.Add(Id("import").CustomFunc(Options{Open: "(", Close: ")"}, setImports))
 
 		f.Add(Type().Id("Option").Func().Params(Op("*").Id(t)), Line())
 
