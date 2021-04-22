@@ -21,9 +21,10 @@ type FieldData struct {
 	// Tags is a map representing a field's tags, e.g. `default:"hello"`
 	Tags *structtag.Tags
 
-	// Type is the string representation of a type, e.g. "string" or
-	// "[]*myQualified.StructType"
-	Type string
+	// Type is the Jen representation of a type. To get the string
+	// representation of it, e.g. something like "string" or
+	// "[]*myQualified.StructType", we can fmt.Sprintf this Type
+	Type *Statement
 }
 
 func firstRune(str string) (r rune) {
@@ -46,7 +47,7 @@ func structFieldsToMap(s *ast.StructType) StructFieldMap {
 
 		// anonymous field, i.e. an embedded field
 		if f.Names == nil {
-			out[typeName] = data
+			out[fmt.Sprintf("%#v", typeName)] = data
 			continue
 		}
 
@@ -74,22 +75,29 @@ func findFieldTags(f *ast.Field) *structtag.Tags {
 	return tag
 }
 
-func findFieldType(field *ast.Field) string {
-	var f func(e interface{}) string
+func findFieldType(field *ast.Field) *Statement {
+	var f func(e interface{}) *Statement
 
-	f = func(e interface{}) (typeName string) {
+	f = func(e interface{}) (typeName *Statement) {
 		switch typ := e.(type) {
 		case *ast.Ident:
-			typeName = typ.Name
+			typeName = Id(typ.Name)
 		case *ast.StarExpr:
-			typeName = fmt.Sprintf("*%s", f(typ.X))
-		case *ast.SelectorExpr:
-			typeName = fmt.Sprintf("%s.%s", f(typ.X), typ.Sel.Name)
-			selectorExprs[typeName] = nil
+			typeName = Op("*").Add(f(typ.X))
 		case *ast.MapType:
-			typeName = fmt.Sprintf("map[%s]%s", f(typ.Key), f(typ.Value))
+			typeName = Map(f(typ.Key)).Add(f(typ.Value))
 		case *ast.ArrayType:
-			typeName = fmt.Sprintf("[]%s", f(typ.Elt))
+			typeName = Index().Add(f(typ.Elt))
+		case *ast.SelectorExpr:
+			// Find the fully qualified path from the package imports
+			qualifier := fmt.Sprintf("%#v", f(typ.X))
+			for _, p := range pkg.Imports {
+				if qualifier == p.Name {
+					qualifier = p.PkgPath
+					break
+				}
+			}
+			typeName = Qual(qualifier, typ.Sel.Name)
 		default:
 			panic(fmt.Errorf("unhandled case for expression %#v", typ))
 		}
@@ -101,22 +109,20 @@ func findFieldType(field *ast.Field) string {
 }
 
 var (
-	selectorExprs = map[string]interface{}{}
-	typeNames     = flag.String("type", "", "comma-delimited list of type names")
-	prefix        = flag.String("prefix", "", "prefix to attach to functional options")
-	factory       = flag.Bool("factory", false, "if present, add a factory function for your type, e.g. NewX")
-	unexported    = flag.Bool("unexported", false, "if present, functional options are also generated for unexported fields")
+	pkg        *packages.Package
+	typeNames  = flag.String("type", "", "comma-delimited list of type names")
+	prefix     = flag.String("prefix", "", "prefix to attach to functional options")
+	factory    = flag.Bool("factory", false, "if present, add a factory function for your type, e.g. NewX")
+	unexported = flag.Bool("unexported", false, "if present, functional options are also generated for unexported fields")
 )
 
-func main() {
+func init() {
 	flag.Parse()
 
 	if len(*typeNames) == 0 {
 		flag.Usage()
 		os.Exit(1)
 	}
-
-	types := strings.Split(*typeNames, ",")
 
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedImports,
@@ -137,8 +143,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	pkg := pkgs[0]
+	pkg = pkgs[0]
+}
 
+func main() {
 	// Find structs
 	structs := map[string]StructFieldMap{}
 
@@ -164,21 +172,7 @@ func main() {
 		}
 	}
 
-	// Compares the package imports to import only those that have a prefix
-	// with any of our found selector expressions.
-	setImports := func(g *Group) {
-		for _, p := range pkg.Imports {
-			for e := range selectorExprs {
-				if strings.HasPrefix(e, p.Name) {
-					// Jennifer doesn't have a nice func for
-					// manual imports. See
-					// https://github.com/dave/jennifer/issues/20.
-					g.Add(Id(p.Name).Lit(p.PkgPath), Line())
-					break
-				}
-			}
-		}
-	}
+	types := strings.Split(*typeNames, ",")
 
 	for _, t := range types {
 		fields, ok := structs[t]
@@ -200,16 +194,14 @@ func main() {
 
 		f.HeaderComment("This file has been automatically generated. Don't edit it.")
 
-		f.Add(Id("import").CustomFunc(Options{Open: "(", Close: ")"}, setImports))
-
-		f.Add(Type().Id("Option").Func().Params(Op("*").Id(t)), Line())
+		f.Add(Type().Id(t+"Option").Func().Params(Op("*").Id(t)), Line())
 
 		setDefaults := func(d Dict) {
 			for _, field := range keys {
 				tags := fields[field].Tags
 
 				if tag, _ := tags.Get("default"); tag != nil {
-					switch fields[field].Type {
+					switch t := fields[field].Type; fmt.Sprintf("%#v", t) {
 					case "string":
 						d[Id(field)] = Lit(tag.Name)
 					default:
@@ -235,13 +227,15 @@ func main() {
 		}
 
 		for _, field := range keys {
-			typeName := Id(fields[field].Type)
+			typeName := fields[field].Type
+			fmt.Println(typeName)
 
 			titledField := field
 			if unicode.IsLower(firstRune(field)) {
 				if !*unexported {
 					continue
 				}
+				fmt.Println("hi", field)
 				titledField = strings.Title(field)
 			}
 
