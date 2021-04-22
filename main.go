@@ -109,11 +109,15 @@ func findFieldType(field *ast.Field) *Statement {
 }
 
 var (
-	pkg        *packages.Package
-	typeNames  = flag.String("type", "", "comma-delimited list of type names")
-	prefix     = flag.String("prefix", "", "prefix to attach to functional options")
-	factory    = flag.Bool("factory", false, "if present, add a factory function for your type, e.g. NewX")
-	unexported = flag.Bool("unexported", false, "if present, functional options are also generated for unexported fields")
+	pkg          *packages.Package
+	typeNames    = flag.String("type", "", "Comma-delimited list of type names")
+	prefix       = flag.String("prefix", "", "Prefix to attach to functional options, e.g. WithColor, WithName, etc.")
+	factory      = flag.Bool("factory", false, "If present, add a factory function for your type, e.g. NewAnimal(opt ...Option)")
+	unexported   = flag.Bool("unexported", false, "If present, functional options are also generated for unexported fields.")
+	uniqueOption = flag.Bool("unique-option", false,
+		"If present, prepends the type to the Option type, e.g. AnimalOption.\n"+
+			"Handy if generating for several structs within the same package.",
+	)
 )
 
 func init() {
@@ -194,7 +198,13 @@ func main() {
 
 		f.HeaderComment("This file has been automatically generated. Don't edit it.")
 
-		f.Add(Type().Id(t+"Option").Func().Params(Op("*").Id(t)), Line())
+		optionName := ""
+		if *uniqueOption {
+			optionName = t
+		}
+		optionName += "Option"
+
+		f.Add(Type().Id(optionName).Func().Params(Op("*").Id(t)), Line())
 
 		setDefaults := func(d Dict) {
 			for _, field := range keys {
@@ -213,7 +223,7 @@ func main() {
 
 		if *factory {
 			f.Add(
-				Func().Id("New"+t).Params(Id("opts").Op("...").Id("Option")).Op("*").Id(t).Block(
+				Func().Id("New"+t).Params(Id("opts").Op("...").Id(optionName)).Op("*").Id(t).Block(
 					Id("o").Op(":=").Op("&").Id(t).Values(DictFunc(setDefaults)),
 					Line(),
 					For(Id("_, opt").Op(":=").Range().Id("opts")).Block(
@@ -240,7 +250,7 @@ func main() {
 			}
 
 			f.Add(
-				Func().Id(*prefix+titledField).Params(Id("x").Add(typeName)).Id("Option").Block(
+				Func().Id(*prefix+titledField).Params(Id("x").Add(typeName)).Id(optionName).Block(
 					Return(
 						Func().Params(Id("o").Op("*").Id(t)).Block(
 							Id("o").Dot(field).Op("=").Id("x"),
