@@ -2,8 +2,6 @@
 
 package animal
 
-import ()
-
 type Option func(*Animal)
 
 func NewAnimal(opts ...Option) *Animal {
@@ -19,20 +17,14 @@ func NewAnimal(opts ...Option) *Animal {
 	return o
 }
 
-func WithColor(x string) Option {
+func Color(x string) Option {
 	return func(o *Animal) {
 		o.Color = x
 	}
 }
 
-func WithSurname(x string) Option {
+func Surname(x string) Option {
 	return func(o *Animal) {
 		o.Surname = x
-	}
-}
-
-func WithCute(x bool) Option {
-	return func(o *Animal) {
-		o.cute = x
 	}
 }

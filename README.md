@@ -1,12 +1,12 @@
 # funcopgen
 
-funcopgen is a small tool to generate [functional
+funcopgen generates [functional
 options](https://github.com/tmrts/go-patterns/blob/master/idiom/functional-options.md)
 for your Go structs.
 
 ## usage
 
-Take some struct in your `animal` package:
+Better illustrated through example, here's an `Animal` struct:
 
 ```go
 package animal
@@ -25,7 +25,12 @@ follows.
 //go:generate go run github.com/andreykaipov/funcopgen -type=Animal -factory
 ```
 
-Run `go generate ./...`.
+Install the tool and generate!
+
+```console
+go install -mod=readonly github.com/andreykaipov/funcopgen@latest
+go generate ./...
+```
 
 Enjoy the new file `zz_generated.animal_funcop.go` in your package:
 
@@ -34,12 +39,10 @@ Enjoy the new file `zz_generated.animal_funcop.go` in your package:
 
 package animal
 
-import ()
-
 type Option func(*Animal)
 
 func NewAnimal(opts ...Option) *Animal {
-	o := &Animal{}
+	o := &Animal{
 		Color:   "red",
 		Surname: "n/a",
 	}
@@ -73,37 +76,30 @@ db := NewAnimal(
 )
 ```
 
+Fun!
+
 ### extras
 
-We can tweak the generated code by passing a few extra flags:
+The generated code can be tweaked by passing extra flags:
 
 ```console
 Usage of funcopgen:
   -factory
-        if present, add a factory function for your type, e.g. NewX
+        If present, add a factory function for your type, e.g. NewAnimal(opt ...Option)
   -prefix string
-        prefix to attach to functional options
+        Prefix to attach to functional options, e.g. WithColor, WithName, etc.
   -type string
-        comma-delimited list of type names
+        Comma-delimited list of type names
   -unexported
-        if present, functional options are also generated for unexported fields
+        If present, functional options are also generated for unexported fields.
+  -unique-option
+        If present, prepends the type to the Option type, e.g. AnimalOption.
+        Handy if generating for several structs within the same package.
 ```
+
+See [examples/test.go](./examples/test.go) for an example of all of these flags.
 
 ## faq
-
-### How do I integrate it into my development lifecycle?
-
-Code generation shouldn't happen often, but it's easy enough to integrate this
-into our build. Just `go generate` before a `go build`. For example, if we're
-using make as our build tool:
-
-```Makefile
-generate:
-    go generate ./...
-
-build: generate
-    go build ./...
-```
 
 ### I vendor my dependencies. How can I vendor this tool?
 
@@ -127,6 +123,20 @@ import (
 ```
 
 After a `go mod tidy` and a `go mod vendor`, the above `go:generate` directive
-should use the vendored tool. If there are failures, make sure you're running
-`go generate` with the `-mod=vendor` flag now, i.e. `go generate -mod=vendor
-./...`.
+will use the vendored tool. Depending on your Go version, you might need to
+explicitly tell Go to use the vendored dependencies, i.e. `go generate
+-mod=vendor ./...`.
+
+### How do I integrate it into my development lifecycle?
+
+Code generation shouldn't happen often, but it's easy enough to integrate this
+into our build. Just `go generate` before a `go build`. For example, if we're
+using make as our build tool:
+
+```Makefile
+generate:
+    go generate ./...
+
+build: generate
+    go build ./...
+```

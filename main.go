@@ -23,7 +23,7 @@ type FieldData struct {
 
 	// Type is the Jen representation of a type. To get the string
 	// representation of it, e.g. something like "string" or
-	// "[]*myQualified.StructType", we can fmt.Sprintf this Type
+	// "[]*myQualified.StructType", we can fmt.Sprintf("%#v", blah) it
 	Type *Statement
 }
 
@@ -38,7 +38,7 @@ func structFieldsToMap(s *ast.StructType) StructFieldMap {
 	out := StructFieldMap{}
 
 	for _, f := range s.Fields.List {
-		jenType := findFieldType(f)
+		jenType := findJenTypeOfField(f)
 
 		data := &FieldData{
 			Type: jenType,
@@ -66,6 +66,9 @@ func structFieldsToMap(s *ast.StructType) StructFieldMap {
 	return out
 }
 
+// TODO maybe get rid of structtag and just use the ast, parsing from the
+// field's Tag field directly. not sure why i went with structtag originally.
+// maybe it was too messy? i can't remember lol
 func findFieldTags(f *ast.Field) *structtag.Tags {
 	if f.Tag == nil {
 		return &structtag.Tags{}
@@ -82,7 +85,7 @@ func findFieldTags(f *ast.Field) *structtag.Tags {
 	return tag
 }
 
-func findFieldType(field *ast.Field) *Statement {
+func findJenTypeOfField(field *ast.Field) *Statement {
 	var f func(e interface{}) *Statement
 
 	f = func(e interface{}) (typeName *Statement) {
@@ -245,14 +248,12 @@ func main() {
 
 		for _, field := range keys {
 			typeName := fields[field].Type
-			fmt.Println(typeName)
 
 			titledField := field
 			if unicode.IsLower(firstRune(field)) {
 				if !*unexported {
 					continue
 				}
-				fmt.Println("hi", field)
 				titledField = strings.Title(field)
 			}
 
@@ -273,5 +274,7 @@ func main() {
 		if err := f.Save(outFile); err != nil {
 			panic(err)
 		}
+
+		fmt.Printf("Generated functional options for %q\n", t)
 	}
 }

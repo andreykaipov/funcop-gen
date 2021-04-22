@@ -1,6 +1,6 @@
 package animal
 
-//go:generate go run github.com/andreykaipov/funcopgen -type=Animal -prefix=With -factory -unexported
+//go:generate go run github.com/andreykaipov/funcopgen -type=Animal -factory
 
 type Animal struct {
 	Surname string `default:"n/a"`
