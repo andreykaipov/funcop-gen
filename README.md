@@ -6,10 +6,13 @@ for your Go structs.
 
 ## usage
 
-Better illustrated through example, here's an `Animal` struct:
+Better illustrated through example, here's an `Animal` struct with the necessary
+`go:generate` directive.
 
 ```go
 package animal
+
+//go:generate go run github.com/andreykaipov/funcopgen -type=Animal -factory
 
 type Animal struct {
 	Surname string `default:"n/a"`
@@ -18,18 +21,10 @@ type Animal struct {
 }
 ```
 
-Add a `go:generate` directive anywhere inside of the `animal` package as
-follows.
-
-```go
-//go:generate go run github.com/andreykaipov/funcopgen -type=Animal -factory
-```
-
-Install the tool and generate!
+Assuming we've already initialized a Go module, generate!
 
 ```console
-go install -mod=readonly github.com/andreykaipov/funcopgen@latest
-go generate ./...
+GOFLAGS=-mod=mod go generate ./...
 ```
 
 Enjoy the new file `zz_generated.animal_funcop.go` in your package:
@@ -103,14 +98,14 @@ See [examples/test.go](./examples/test.go) for an example of all of these flags.
 
 ### I vendor my dependencies. How can I vendor this tool?
 
-You might want to read through [this Go
-thread](https://github.com/golang/go/issues/25922) and check out [this
-StackOverflow
-answer](https://stackoverflow.com/questions/52428230/how-do-go-modules-work-with-installable-commands/54028731#54028731)
-for suggestions on how others have accomplished vendoring development
-dependencies.
+In the usage example above, we used `-mod=mod` to tell Go to ignore the vendor
+directory since this tool isn't ever imported as a package in any module. If
+instead we'd like to vendor this tool, the recommended approach can be found in
+detail under [_How can I track tool dependencies for
+a module?_](https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module)
+from Go's GitHub wiki.
 
-The TLDR of it is to create a tools package with the following contents:
+The TLDR is to add a `tools.go` in your project with the following contents:
 
 ```go
 // +build tools
@@ -122,10 +117,9 @@ import (
 )
 ```
 
-After a `go mod tidy` and a `go mod vendor`, the above `go:generate` directive
-will use the vendored tool. Depending on your Go version, you might need to
-explicitly tell Go to use the vendored dependencies, i.e. `go generate
--mod=vendor ./...`.
+After a `go mod vendor`, we can omit the `-mod=mod` we added originally.
+However, if your Go version is 1.13 or lower, you'll need to explicitly tell Go
+to use the vendored version, i.e. `GOFLAGS=-mod=vendor go generate ./...`.
 
 ### How do I integrate it into my development lifecycle?
 
