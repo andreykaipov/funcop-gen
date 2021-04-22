@@ -6,15 +6,15 @@ for your Go structs.
 
 ## usage
 
-Take some struct in `my/pkg/here/animal`:
+Take some struct in your `animal` package:
 
 ```go
 package animal
 
 type Animal struct {
-    Surname string
-    Color   string
-    Cute    bool
+	Surname string
+	Color   string
+	cute    bool
 }
 ```
 
@@ -22,18 +22,19 @@ Add a `go:generate` directive anywhere inside of the `animal` package as
 follows.
 
 ```go
-//go:generate go run github.com/andreykaipov/funcopgen -type Animal
+//go:generate go run github.com/andreykaipov/funcopgen -type=Animal -factory
 ```
 
 Run `go generate ./...`.
 
-Enjoy the new file `zz_generated.animal_funcop.go` in `my/pkg/here/animal` with
-the following contents:
+Enjoy the new file `zz_generated.animal_funcop.go` in your package:
 
 ```go
 // This file has been automatically generated. Don't edit it.
 
 package animal
+
+import ()
 
 type Option func(*Animal)
 
@@ -53,12 +54,6 @@ func Color(x string) Option {
 	}
 }
 
-func Cute(x bool) Option {
-	return func(o *Animal) {
-		o.Cute = x
-	}
-}
-
 func Surname(x string) Option {
 	return func(o *Animal) {
 		o.Surname = x
@@ -69,11 +64,26 @@ func Surname(x string) Option {
 Now we can instantiate our animals as follows:
 
 ```go
-a := NewAnimal(
+db := NewAnimal(
 	Surname("ducky"),
 	Color("blue"),
-	Cute(true),
 )
+```
+
+### extras
+
+We can tweak the generated code by passing a few extra flags:
+
+```console
+Usage of funcopgen:
+  -factory
+        if present, add a factory function for your type, e.g. NewX
+  -prefix string
+        prefix to attach to functional options
+  -type string
+        comma-delimited list of type names
+  -unexported
+        if present, functional options are also generated for unexported fields
 ```
 
 ## faq
