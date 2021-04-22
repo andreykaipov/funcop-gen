@@ -108,11 +108,6 @@ var (
 	unexported    = flag.Bool("unexported", false, "if present, functional options are also generated for unexported fields")
 )
 
-func Usage() {
-	fmt.Fprintf(os.Stderr, "Usage of funcopgen:\n")
-	fmt.Fprintf(os.Stderr, "\tfuncopgen -type T\n")
-}
-
 func main() {
 	flag.Parse()
 
@@ -136,7 +131,7 @@ func main() {
 	}
 
 	// Since this tool is meant to be used from a go:generate comment, there
-	// should only ever be on package.
+	// should only ever be one package.
 	if len(pkgs) != 1 {
 		fmt.Fprintf(os.Stderr, "expected only one package!")
 		os.Exit(1)
