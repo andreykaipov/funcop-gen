@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"unicode"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/fatih/structtag"
@@ -23,6 +24,13 @@ type FieldData struct {
 	// Type is the string representation of a type, e.g. "string" or
 	// "[]*myQualified.StructType"
 	Type string
+}
+
+func firstRune(str string) (r rune) {
+	for _, r = range str {
+		return
+	}
+	return
 }
 
 func structFieldsToMap(s *ast.StructType) StructFieldMap {
@@ -97,6 +105,7 @@ var (
 	typeNames     = flag.String("type", "", "comma-delimited list of type names")
 	prefix        = flag.String("prefix", "", "prefix to attach to functional options")
 	factory       = flag.Bool("factory", false, "if present, add a factory function for your type, e.g. NewX")
+	unexported    = flag.Bool("unexported", false, "if present, functional options are also generated for unexported fields")
 )
 
 func Usage() {
@@ -233,8 +242,16 @@ func main() {
 		for _, field := range keys {
 			typeName := Id(fields[field].Type)
 
+			titledField := field
+			if unicode.IsLower(firstRune(field)) {
+				if !*unexported {
+					continue
+				}
+				titledField = strings.Title(field)
+			}
+
 			f.Add(
-				Func().Id(*prefix+field).Params(Id("x").Add(typeName)).Id("Option").Block(
+				Func().Id(*prefix+titledField).Params(Id("x").Add(typeName)).Id("Option").Block(
 					Return(
 						Func().Params(Id("o").Op("*").Id(t)).Block(
 							Id("o").Dot(field).Op("=").Id("x"),
