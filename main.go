@@ -38,16 +38,23 @@ func structFieldsToMap(s *ast.StructType) StructFieldMap {
 	out := StructFieldMap{}
 
 	for _, f := range s.Fields.List {
-		typeName := findFieldType(f)
+		jenType := findFieldType(f)
 
 		data := &FieldData{
-			Type: typeName,
+			Type: jenType,
 			Tags: findFieldTags(f),
 		}
 
 		// anonymous field, i.e. an embedded field
+		// and if it's a qualified type, we drop the qualifier
 		if f.Names == nil {
-			out[fmt.Sprintf("%#v", typeName)] = data
+			typeName := fmt.Sprintf("%#v", jenType)
+			split := strings.Split(typeName, ".")
+			if len(split) == 1 {
+				out[typeName] = data
+			} else {
+				out[split[1]] = data
+			}
 			continue
 		}
 
