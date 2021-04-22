@@ -7,7 +7,10 @@ import ()
 type Option func(*Animal)
 
 func NewAnimal(opts ...Option) *Animal {
-	o := &Animal{}
+	o := &Animal{
+		Color:   "red",
+		Surname: "n/a",
+	}
 
 	for _, opt := range opts {
 		opt(o)

@@ -12,8 +12,8 @@ Take some struct in your `animal` package:
 package animal
 
 type Animal struct {
-	Surname string
-	Color   string
+	Surname string `default:"n/a"`
+	Color   string `default:"red"`
 	cute    bool
 }
 ```
@@ -40,6 +40,9 @@ type Option func(*Animal)
 
 func NewAnimal(opts ...Option) *Animal {
 	o := &Animal{}
+		Color:   "red",
+		Surname: "n/a",
+	}
 
 	for _, opt := range opts {
 		opt(o)
