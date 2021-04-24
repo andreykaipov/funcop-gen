@@ -275,6 +275,6 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf("Generated functional options for %q\n", t)
+		fmt.Printf("Generated functional options for `%s.%s`\n", pkg.Name, t)
 	}
 }
