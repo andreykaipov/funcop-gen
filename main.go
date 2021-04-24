@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-	"io"
 	"os"
 	"sort"
 	"strings"
@@ -121,7 +120,6 @@ func findJenTypeOfField(field *ast.Field) *Statement {
 
 var (
 	fs           = flag.NewFlagSet("funcopgen", flag.ExitOnError)
-	printVersion = fs.Bool("version", false, "Print version and exit")
 	typeNames    = fs.String("type", "", "Comma-delimited list of type names")
 	prefix       = fs.String("prefix", "", "Prefix to attach to functional options, e.g. WithColor, WithName, etc.")
 	factory      = fs.Bool("factory", false, "If present, add a factory function for your type, e.g. NewAnimal(opt ...Option)")
@@ -134,21 +132,12 @@ var (
 	pkg *packages.Package
 )
 
-func versionInfo(out io.Writer) {
-	fmt.Fprintf(out, "%s v%s\n", fs.Name(), version)
-}
-
 func init() {
 	fs.Parse(os.Args[1:])
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "Usage of %s:\n", fs.Name())
 		fs.PrintDefaults()
-	}
-
-	if *printVersion {
-		versionInfo(os.Stdout)
-		os.Exit(0)
 	}
 
 	if len(*typeNames) == 0 {

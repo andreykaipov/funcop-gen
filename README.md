@@ -90,8 +90,6 @@ Usage of funcopgen:
   -unique-option
         If present, prepends the type to the Option type, e.g. AnimalOption.
         Handy if generating for several structs within the same package.
-  -version
-        Print version and exit
 ```
 
 See [examples/test.go](./examples/test.go) for an example of all of these flags.
