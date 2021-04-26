@@ -173,12 +173,19 @@ func init() {
 }
 
 func main() {
+	types := map[string]interface{}{}
+	for _, t := range strings.Split(*typeNames, ",") {
+		types[t] = nil
+	}
+
 	// Find structs
 	structs := map[string]StructFieldMap{}
 
 	for _, file := range pkg.Syntax {
 		for objName, obj := range file.Scope.Objects {
-
+			if _, ok := types[objName]; !ok {
+				continue
+			}
 			switch obj.Kind {
 			case ast.Typ:
 				switch typ := obj.Decl.(*ast.TypeSpec).Type.(type) {
@@ -198,9 +205,7 @@ func main() {
 		}
 	}
 
-	types := strings.Split(*typeNames, ",")
-
-	for _, t := range types {
+	for t := range types {
 		fields, ok := structs[t]
 		if !ok {
 			fmt.Fprintf(os.Stderr, "Unknown type %q in %q in package %q\n", t, pkg.Name, pkg.PkgPath)
