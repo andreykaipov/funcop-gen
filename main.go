@@ -100,6 +100,9 @@ func findJenTypeOfField(field *ast.Field) *Statement {
 			typeName = Map(f(typ.Key)).Add(f(typ.Value))
 		case *ast.ArrayType:
 			typeName = Index().Add(f(typ.Elt))
+		case *ast.StructType:
+			fmt.Fprintf(os.Stderr, "TODO: anon structs\n")
+			os.Exit(2)
 		case *ast.SelectorExpr:
 			// Find the fully qualified path from the package imports
 			qualifier := fmt.Sprintf("%#v", f(typ.X))
