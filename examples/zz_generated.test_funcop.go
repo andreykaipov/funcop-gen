@@ -30,6 +30,12 @@ func WithName(x string) TestOption {
 	}
 }
 
+func WithProfiles(x []map[string]interface{}) TestOption {
+	return func(o *Test) {
+		o.Profiles = x
+	}
+}
+
 func WithStatement(x *jen.Statement) TestOption {
 	return func(o *Test) {
 		o.Statement = x
@@ -45,6 +51,12 @@ func WithA(x bytes.Buffer) TestOption {
 func WithB(x map[time.Time]*time.Time) TestOption {
 	return func(o *Test) {
 		o.b = x
+	}
+}
+
+func WithBounds(x *Bounds) TestOption {
+	return func(o *Test) {
+		o.bounds = x
 	}
 }
 
