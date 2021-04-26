@@ -90,6 +90,8 @@ func findJenTypeOfField(field *ast.Field) *Statement {
 
 	f = func(e interface{}) (typeName *Statement) {
 		switch typ := e.(type) {
+		case *ast.InterfaceType:
+			typeName = Interface()
 		case *ast.Ident:
 			typeName = Id(typ.Name)
 		case *ast.StarExpr:
