@@ -18,11 +18,17 @@ type Test struct {
 	*jen.Statement `default:"jen.Id(\"lol\")"`
 	Profiles       []map[string]interface{} `json:"profiles"`
 	bounds         *Bounds
+	Hi             chan Bounds
+	EmbedThis
 }
 
 type Bounds struct {
 	X int `json:"x"`
 	Y int `json:"y"`
+}
+
+type EmbedThis struct {
+	a string
 }
 
 // go generate would skip this since it's not in our type list above

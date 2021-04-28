@@ -24,6 +24,18 @@ func NewTest(opts ...TestOption) *Test {
 	return o
 }
 
+func WithEmbedThis(x EmbedThis) TestOption {
+	return func(o *Test) {
+		o.EmbedThis = x
+	}
+}
+
+func WithHi(x chan Bounds) TestOption {
+	return func(o *Test) {
+		o.Hi = x
+	}
+}
+
 func WithName(x string) TestOption {
 	return func(o *Test) {
 		o.Name = x
