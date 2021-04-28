@@ -100,6 +100,8 @@ func findJenTypeOfField(field *ast.Field) *Statement {
 			typeName = Map(f(typ.Key)).Add(f(typ.Value))
 		case *ast.ArrayType:
 			typeName = Index().Add(f(typ.Elt))
+		case *ast.ChanType:
+			typeName = Chan().Add(f(typ.Value))
 		case *ast.StructType:
 			fmt.Fprintf(os.Stderr, "TODO: anon structs\n")
 			os.Exit(2)
